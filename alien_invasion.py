@@ -1,86 +1,48 @@
 import sys
+
 import pygame
+from pygame.sprite import Group
+
 from settings import Settings
+from game_stats import GameStats
+from scoreboard import Scoreboard
+from button import Button
 from ship import Ship
-from bullet import Bullet
-
-class AlienInvasion:
-    def __init__(self):
-        pygame.init()
-        self.clock = pygame.time.Clock()
-        self.settings = Settings()
-        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
-        self.screen = pygame.display.set_mode((1200, 800))
-        pygame.display.set_caption("Alien Invasion")
-        self.ship = Ship(self)
-        self.bullets = pygame.sprite.Group()
-        self.bg_color = (173, 216, 230)
-
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-        self.settings.screen_width = self.screen.get_rect().width
-        self.settings.screen_height = self.screen.get_rect().height
-        self.character_image = pygame.image.load('images/cube.png')
-        self.character_rect = self.screen.get_rect().center
- 
-
-    def run_game(self):
-        while True:
-            self._check_events()
-            self.ship.update()
-
-    def _update_bullets(self):
-            self.bullets.update()
-            for bullet in self.bullets.copy():
-                if bullet.rect.bottom <= 0:
-                    self.bullets.remove(bullet)
-                print(len(self.bullets))
-
-            self._update_screen()
-            self.clock.tick(60)
+import game_functions as gf 
 
 
-    def _check_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                self._check_keydown_events(event)
-            elif event.type == pygame.KEYUP:
-                self._check_keyup_events(event)
 
+def run_game():
+    pygame.init()
+    ai_settings = Settings()
+    screen = pygame.display.set_mode(
+        (ai_settings.screen_width, ai_settings.screen_height)
+    )
+    pygame.display.set_caption("Alien Invasion")
 
-    def _check_keydown_events(self, event):
-        if event.key == pygame.K_RIGHT:
-            self.ship.moving_right = True
-        elif event.key == pygame.K_LEFT:
-            self.ship.moving_left = True
-        elif event.key == pygame.K_q:
-            sys.exit()
-        elif event.key == pygame.K_SPACE:
-            self._fire_bullet()
+    play_button = Button(ai_settings, screen, "Play")
 
-    def _check_keyup_events(self, event):
-        if event.key == pygame.K_RIGHT:
-            self.ship.moving_right = False
-        elif event.key == pygame.K_LEFT:
-            self.ship.moving_left = False
+    # Create an instance to store game statistics and create a scoreboard.
+    stats = GameStats(ai_settings)
+    sb = Scoreboard(ai_settings, screen, stats)
 
-    def _fire_bullet(self):
-        if len(self.bullets) < self.settings.bullets_allowed:
-            new_bullet = Bullet(self)
-            self.bullets.add(new_bullet)
+    ship = Ship(ai_settings, screen)
+    bullets = Group()
+    aliens = Group()
 
+    gf.create_fleet(ai_settings, screen, ship, aliens)
 
-    def _update_screen(self):
-            self.screen.fill(self.settings.bg_color)
-            for bullet in self.bullets.sprites():
-                bullet.draw_bullet()
-            self.character_image = pygame.transform.scale(self.character_image, (50, 50))
-            self.screen.blit(self.character_image, self.character_rect)
-            self.ship.blitme()
-            pygame.display.flip()
+    while True: 
+        #keyboard and mouse events
+        gf.check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets)
 
-if __name__ == '__main__':
-    ai = AlienInvasion()
-    ai.run_game()
+        if stats.game_Active:
+            ship.update()
+            gf.update_bullets(ai_settings, screen, stats, sb, ship, aliens, bullets)
+            gf.update_aliens(ai_settings, screen, stats, sb, ship, aliens, bullets)
+
+        gf.update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, play_button)
+        
+       
+run_game()
 
